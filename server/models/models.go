@@ -1,6 +1,7 @@
 package models
 
 import (
+	"database/sql"
 	"time"
 )
 
@@ -14,13 +15,13 @@ type User struct {
 
 type Task struct {
 	// UserID    uint
-	ID        uint
-	Title     string
-	Comments  []Comment
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	ClosedAt  time.Time
-	StatusID  uint `gorm:"default:1;notnull"`
+	ID        uint         `json:"id"`
+	Title     string       `json:"title"`
+	Comments  []Comment    `json:"comments"`
+	CreatedAt time.Time    `json:"createdAt"`
+	UpdatedAt time.Time    `json:"updatedAt"`
+	ClosedAt  sql.NullTime `json:"closedAt" gorm:"null;default:null"`
+	StatusID  uint         `json:"statusId" gorm:"default:1;notnull"`
 }
 
 func (Task) TableName() string {
@@ -28,10 +29,10 @@ func (Task) TableName() string {
 }
 
 type Comment struct {
-	ID        uint
-	TaskID    uint
-	Message   string
-	CreatedAt time.Time
+	ID        uint      `json:"id"`
+	TaskID    uint      `json:"taskId"`
+	Message   string    `json:"message"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 func (Comment) TableName() string {
@@ -39,8 +40,8 @@ func (Comment) TableName() string {
 }
 
 type Status struct {
-	ID   uint
-	Name string
+	ID   uint   `json:"id"`
+	Name string `json:"name"`
 }
 
 func (Status) TableName() string {

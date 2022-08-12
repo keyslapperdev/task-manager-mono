@@ -3,11 +3,11 @@ module github.com/keyslapperdev/task-manager-mono
 go 1.18
 
 require (
-	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-gonic/contrib v0.0.0-20201101042839-6a891bf89f19
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-playground/validator/v10 v10.10.0
-	github.com/smallstep/assert v0.0.0-20200723003110-82e2b9b3b262
+	github.com/go-test/deep v1.0.8
+	github.com/joho/godotenv v1.4.0
 	github.com/stretchr/testify v1.8.0
 	gorm.io/driver/sqlite v1.3.6
 	gorm.io/gorm v1.23.8

@@ -11,9 +11,10 @@ import (
 )
 
 var _SQLITE_DB_NAME = os.Getenv("SQLITE_DB_NAME")
+var _APP_MODE = os.Getenv("APP_MODE")
 
 type DataMgr interface {
-	CreateTask(context.Context, models.Task) uint
+	CreateTask(context.Context, models.Task) models.Task
 	GetTasks(context.Context) []models.Task
 	GetTaskByID(context.Context, uint) models.Task
 	UpdateTask(context.Context, models.Task) models.Task
@@ -26,10 +27,13 @@ type DBStorage struct {
 }
 
 func NewDBStorer(inMemory bool) DataMgr {
-	dsn := _SQLITE_DB_NAME
+	dsn := ":memory:"
 
-	if inMemory {
-		dsn = ":memory:"
+	if !inMemory {
+		dsn = _SQLITE_DB_NAME
+		if dsn == "" {
+			panic("must set database name (SQLITE_DB_NAME)")
+		}
 	}
 
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
@@ -41,12 +45,16 @@ func NewDBStorer(inMemory bool) DataMgr {
 	db.AutoMigrate(models.Comment{})
 	db.AutoMigrate(models.Task{})
 
-	return &DBStorage{db.Debug()}
+	if _APP_MODE == "test" {
+		db = db.Debug()
+	}
+
+	return &DBStorage{db}
 }
 
-func (dbs DBStorage) CreateTask(ctx context.Context, task models.Task) uint {
+func (dbs DBStorage) CreateTask(ctx context.Context, task models.Task) models.Task {
 	dbs.WithContext(ctx).Create(&task)
-	return task.ID
+	return task
 }
 
 func (dbs DBStorage) GetTasks(ctx context.Context) []models.Task {
@@ -72,12 +80,12 @@ func (dbs DBStorage) UpdateTask(ctx context.Context, task models.Task) models.Ta
 
 func (dbs DBStorage) CloseTask(ctx context.Context, task models.Task) models.Task {
 	task.StatusID = models.StatusClosed.ID
-	task.ClosedAt = time.Now()
+	task.ClosedAt.Time = time.Now().Local()
 
-	dbs.WithContext(ctx).Debug().Save(&task)
+	dbs.WithContext(ctx).Save(&task)
 	return task
 }
 
 func (dbs DBStorage) DeleteTask(ctx context.Context, task models.Task) {
-	dbs.WithContext(ctx).Debug().Delete(&task)
+	dbs.WithContext(ctx).Delete(&task)
 }

@@ -1,28 +1,21 @@
-package routes
+package router
 
 import (
 	"context"
 	"fmt"
 	"net/http"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/keyslapperdev/task-manager-mono/server/models"
-	"github.com/keyslapperdev/task-manager-mono/server/storage"
 )
 
 var validate = validator.New()
-var once = sync.Once{}
-var dataMgr storage.DataMgr
 
-func SetDataMgr(dm storage.DataMgr) {
-	once.Do(func() {
-		dataMgr = dm
-	})
-}
+// add user routes
+// create
 
 func AddTask(c *gin.Context) {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
@@ -31,21 +24,21 @@ func AddTask(c *gin.Context) {
 	var task models.Task
 
 	if err := c.BindJSON(&task); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(returnBadRequest(err.Error()))
 		fmt.Println(err)
 		return
 	}
 
 	validationErr := validate.Struct(task)
 	if validationErr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
+		c.JSON(returnBadRequest(validationErr.Error()))
 		fmt.Println(validationErr)
 		return
 	}
 
-	taskID := dataMgr.CreateTask(ctx, task)
+	newTask := dataMgr.CreateTask(ctx, task)
 
-	c.JSON(http.StatusOK, gin.H{"id": taskID})
+	c.JSON(returnOK(newTask))
 }
 
 func GetTasks(c *gin.Context) {
@@ -54,7 +47,7 @@ func GetTasks(c *gin.Context) {
 
 	tasks := dataMgr.GetTasks(ctx)
 
-	c.JSON(http.StatusOK, gin.H{"tasks": tasks})
+	c.JSON(returnOK(tasks))
 }
 
 func GetTaskByID(c *gin.Context) {
@@ -63,17 +56,17 @@ func GetTaskByID(c *gin.Context) {
 
 	id, found := c.GetQuery("id")
 	if !found {
-		panic("id not found in query")
+		c.JSON(returnBadRequest("id not found in query"))
 	}
 
 	taskID, err := strconv.Atoi(id)
 	if err != nil {
-		panic("id conversion error: " + err.Error())
+		c.JSON(returnBadRequest("bad id passed: " + id))
 	}
 
 	task := dataMgr.GetTaskByID(ctx, uint(taskID))
 
-	c.JSON(http.StatusOK, gin.H{"task": task})
+	c.JSON(returnOK(task))
 }
 
 func UpdateTask(c *gin.Context) {
@@ -83,14 +76,14 @@ func UpdateTask(c *gin.Context) {
 	var task models.Task
 
 	if err := c.BindJSON(&task); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(returnBadRequest(err.Error()))
 		fmt.Println(err)
 		return
 	}
 
 	validationErr := validate.Struct(task)
 	if validationErr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
+		c.JSON(returnBadRequest(validationErr.Error()))
 		fmt.Println(validationErr)
 		return
 	}
@@ -99,7 +92,7 @@ func UpdateTask(c *gin.Context) {
 	// the updated fields.
 	updatedTask := dataMgr.UpdateTask(ctx, task)
 
-	c.JSON(http.StatusOK, gin.H{"task": updatedTask})
+	c.JSON(returnOK(updatedTask))
 }
 
 func DeleteTask(c *gin.Context) {
@@ -109,14 +102,14 @@ func DeleteTask(c *gin.Context) {
 	var task models.Task
 
 	if err := c.BindJSON(&task); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(returnBadRequest(err.Error()))
 		fmt.Println(err)
 		return
 	}
 
 	validationErr := validate.Struct(task)
 	if validationErr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
+		c.JSON(returnBadRequest(validationErr.Error()))
 		fmt.Println(validationErr)
 		return
 	}
@@ -129,10 +122,23 @@ func DeleteTask(c *gin.Context) {
 		updatedTask = dataMgr.CloseTask(ctx, task)
 	}
 
-	c.JSON(http.StatusOK, gin.H{"task": updatedTask})
+	c.JSON(returnOK(updatedTask))
 }
 
 func GetStatusMap(c *gin.Context) {
 	statusMap := models.GetStatusMap()
-	c.JSON(http.StatusOK, gin.H{"statusMap": statusMap})
+	c.JSON(returnOK(statusMap))
+}
+
+type structuredReturn struct {
+	Data   any      `json:"data,omitempty"`
+	Errors []string `json:"errors,omitempty"`
+}
+
+func returnOK(data any) (int, structuredReturn) {
+	return http.StatusOK, structuredReturn{Data: data}
+}
+
+func returnBadRequest(errs ...string) (int, structuredReturn) {
+	return http.StatusBadRequest, structuredReturn{Errors: errs}
 }

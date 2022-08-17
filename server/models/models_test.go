@@ -11,7 +11,7 @@ func Test_GetStatusMap(t *testing.T) {
 
 	var fail bool
 	var notFoundStatuses []Status
-	for _, status := range StatusTypes {
+	for _, status := range StatusList {
 		if s, ok := gotMap[status.Name]; !ok || s != status.ID {
 			notFoundStatuses = append(notFoundStatuses, status)
 			fail = true

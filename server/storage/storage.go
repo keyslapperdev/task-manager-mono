@@ -41,7 +41,8 @@ func NewDBStorer(inMemory bool) DataMgr {
 		panic("error opening db: " + err.Error())
 	}
 
-	db.AutoMigrate(models.StatusTypes)
+	db.AutoMigrate(models.PriorityList)
+	db.AutoMigrate(models.StatusList)
 	db.AutoMigrate(models.Comment{})
 	db.AutoMigrate(models.Task{})
 
